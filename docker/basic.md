@@ -233,12 +233,65 @@ docker compose logs -f    # follow logs
 
 ---
 
+## 8b. Updating an Image
+
+With docker, **an image does not track its source.** Once built, it's a frozen, inert artifact — it has no pointer back to the Dockerfile, no awareness of your project folder, no idea when your code changes. Docker never "notices" a change and never updates anything automatically.
+
+### There is no "update" command — only rebuild
+
+```bash
+docker build -t myapp .
+```
+This is the entire update mechanism. Every time you run it, Docker reads whatever the Dockerfile and build context look like *right now* and produces a new image. If you change `index.js` and don't rebuild, every container you run from `myapp` still contains the old code — forever, until you rebuild.
+
+### A running container never updates either
+
+A **container** stays locked to the image it was created from, even if you rebuild a new image under the same tag afterward. To get new code live, you must replace the container:
+```bash
+docker build -t myapp .
+docker stop myserver && docker rm myserver
+docker run -d --name myserver -p 3000:3000 myapp
+```
+With Compose, this collapses into one command:
+```bash
+docker compose up -d --build
+```
+`--build` rebuilds first, then Compose replaces any containers whose image changed.
+
+### The mental model, stated plainly
+
+| git | Docker |
+|---|---|
+| `git pull` updates your working directory in place | *(no equivalent)* — images never update in place |
+| tracks history and diffs automatically | tracks nothing about source; an image is a frozen snapshot |
+| one repo, continuously evolving | every build produces a new, independent image |
+
+The closer git analogy isn't `git pull` — it's `git commit` producing a new, permanently frozen hash each time, except there's no "check out the old one back into place." You only ever build forward and swap containers to what's new.
+
+This is also why tagging matters (see `advanced.md` — Tagging Images Properly): `myapp:1.0.0` and `myapp:1.0.1` are two completely independent images. Nothing links them except the naming convention you chose to use.
+
+**Note:** the sequence above (`stop` → `rm` → `run`) causes a real gap where your app is down. That gap, and how to avoid it with multiple containers, is covered in `advanced.md` — Zero-Downtime Deploys.
+
+---
+
 ## 9. Cleanup
 
 ```
 docker system prune            # remove unused containers/images/networks
 docker system prune -a         # more aggressive, also removes unused images
 ```
+
+---
+
+## 9b. Extra - Install guides
+
+Official install guides:
+
+- [Windows](https://docs.docker.com/desktop/setup/install/windows-install/)
+- [macOS](https://docs.docker.com/desktop/setup/install/mac-install/)
+- [Linux](https://docs.docker.com/desktop/setup/install/linux/) (Ubuntu, Debian, Fedora, Arch, RHEL)
+
+One nuance: on Linux, Docker Desktop is optional. Linux can run containers natively, so you can install just **Docker Engine** (CLI + daemon, no GUI, no VM) directly instead — see the [Engine install docs](https://docs.docker.com/engine/install/). Windows and macOS need Docker Desktop (or Engine plus a manually managed VM) because they can't run Linux containers natively.
 
 ---
 
@@ -265,3 +318,14 @@ docker logs -f X
 docker build -t X .
 docker compose up -d / down
 ```
+
+---
+
+## See more
+
+- [Docker Desktop overview](https://docs.docker.com/desktop/) — official landing page, install links for all platforms
+- [Docker Desktop install: Windows](https://docs.docker.com/desktop/setup/install/windows-install/) / [macOS](https://docs.docker.com/desktop/setup/install/mac-install/) / [Linux](https://docs.docker.com/desktop/setup/install/linux/)
+- [Docker Engine install (Linux, no Desktop/GUI)](https://docs.docker.com/engine/install/)
+- [Dockerfile reference](https://docs.docker.com/reference/dockerfile/)
+- [Docker CLI reference](https://docs.docker.com/reference/cli/docker/)
+- [Docker Compose docs](https://docs.docker.com/compose/)

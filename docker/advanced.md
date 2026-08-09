@@ -131,6 +131,55 @@ Shows up in `docker ps` as `healthy` / `unhealthy` — useful for load balancers
 
 ---
 
+## 5b. Zero-Downtime Deploys
+
+Layer caching (§1) makes **builds** fast. It does nothing about **deploy downtime** — those are two separate problems, and it's easy to conflate them. A hotfix that builds in 3 seconds can still cause a full outage if you swap containers naively. This section is about the second problem.
+
+### Why the naive approach breaks
+
+```bash
+docker stop myserver && docker rm myserver
+docker run -d --name myserver -p 3000:3000 myapp
+```
+Between `stop` and the new container becoming ready, there is a real gap — every request in that window fails. With a single container, this is unavoidable without extra tooling: there's nothing else to serve traffic while the swap happens.
+
+### Why multiple containers + a load balancer is the actual fix
+
+This is exactly what the nginx + multi-instance setup (see `hands-on.md`) is *for* — not just scaling throughput, but giving you redundancy so you can update containers **one at a time** while the others keep serving. This pattern is called a **rolling update**.
+
+Manually, against our hands-on setup, a rolling update looks like:
+```bash
+docker build -t myapp .
+
+docker stop app1 && docker rm app1
+docker run -d --name app1 --network appnet -e INSTANCE_NAME=app1 myapp
+# wait until app1 is confirmed healthy before continuing
+
+docker stop app2 && docker rm app2
+docker run -d --name app2 --network appnet -e INSTANCE_NAME=app2 myapp
+# wait, confirm healthy
+
+docker stop app3 && docker rm app3
+docker run -d --name app3 --network appnet -e INSTANCE_NAME=app3 myapp
+```
+At every point in this sequence, at least 2 of 3 containers are up — nginx keeps routing to whichever are alive, so no request is dropped. This is why `HEALTHCHECK` (§5) matters here specifically: it's the mechanism that answers "is app1 actually ready to receive traffic yet" before you move on to app2. Without it, you're guessing with a sleep timer.
+
+### The gotcha: `docker compose up -d --build` is not automatically zero-downtime
+
+By default, Compose's update behavior is closer to the naive approach — it can stop and replace a service's containers without staggering them or waiting for health. For genuinely zero-downtime rolling updates, you need one of:
+
+- **Manual staggering**, as shown above, scripted against Compose service names
+- **Compose's `deploy.update_config`** settings (`order: start-first`, parallelism, health-based delay) — these only take effect in Swarm mode, not plain `docker compose up`
+- **A real orchestrator** — Kubernetes, Swarm, ECS, etc. — where rolling updates are a built-in, first-class concept rather than something you script by hand
+
+For local/small-scale setups (like our hands-on project), manual staggering with healthchecks is the honest, practical answer. Orchestrators become worth the added complexity once you're doing this often enough, or across enough containers, that scripting it by hand gets unreliable.
+
+### The core idea, stated plainly
+
+> Caching makes rebuilding fast. Redundancy (multiple containers) plus healthchecks plus staggered replacement is what makes *deploying* that rebuild safe. You need both, and they solve different problems.
+
+---
+
 ## 6. Non-root User
 
 By default containers run as root, which is unnecessary risk for most apps.
@@ -172,3 +221,4 @@ Lets you roll back precisely, and know exactly what code a running container cor
 | Image tag              | `latest`                    | versioned tag or commit SHA                   |
 | Health                 | none                        | `HEALTHCHECK` defined                         |
 | Rebuild speed          | irrelevant                  | optimized via layer caching                   |
+| Deploy strategy        | stop/rm/run, brief downtime OK | rolling update across containers, zero downtime |

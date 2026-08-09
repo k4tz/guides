@@ -237,7 +237,74 @@ docker compose logs -f
 
 ---
 
-## Step 7 — Tear down
+## Step 7 — Simulate a Hotfix with a Zero-Downtime Rolling Update
+
+This is the step that connects everything: caching made the rebuild fast, but getting that rebuild *live* without dropping traffic is a separate problem — solved by having multiple containers and replacing them one at a time.
+
+### 7a. Add a healthcheck
+
+Update `app/Dockerfile` to add a `HEALTHCHECK`, so Docker can tell us when a freshly-started container is actually ready, not just running:
+```dockerfile
+FROM node:20-slim
+WORKDIR /app
+COPY package.json ./
+RUN npm install
+COPY . .
+EXPOSE 3000
+HEALTHCHECK --interval=5s --timeout=3s --retries=3 \
+  CMD curl -f http://localhost:3000/health || exit 1
+CMD ["node", "index.js"]
+```
+`curl` isn't in the `node:20-slim` base image by default — install it by adding this line before `COPY package.json ./`:
+```dockerfile
+RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
+```
+
+Rebuild everything once to pick this up:
+```bash
+docker compose up -d --build
+docker compose ps
+```
+You should now see a `healthy` status against each `app*` service once it settles.
+
+### 7b. Make the "hotfix"
+
+Edit `app/index.js` — change the `message` string, e.g. `'Hello from Docker!'` → `'Hello from Docker (patched)!'`. This simulates a real hotfix: one file changed, dependencies untouched.
+
+### 7c. Roll it out one container at a time
+
+While this runs, keep a second terminal hitting the load balancer in a loop so you can *see* whether anything drops:
+```bash
+while true; do curl -s http://localhost:8080/ | grep -o '"message":"[^"]*"'; sleep 0.5; done
+```
+
+In your main terminal, rebuild the image (fast, thanks to caching — only `COPY . .` and downstream layers actually change):
+```bash
+docker compose build app1 app2 app3
+```
+
+Now replace containers one at a time, waiting for health before moving to the next:
+```bash
+docker compose up -d --no-deps app1
+# watch docker compose ps until app1 shows "healthy", then continue
+
+docker compose up -d --no-deps app2
+# wait for healthy
+
+docker compose up -d --no-deps app3
+# wait for healthy
+```
+`--no-deps` stops Compose from also touching `proxy`, which we don't want restarted here.
+
+### 7d. Confirm zero downtime
+
+Check the loop from 7c — every response should have succeeded throughout, and the `message` field should flip from the old text to `(patched)` gradually as each container is replaced, never all at once, and never with a gap. That gradual, uninterrupted flip **is** the rolling update working correctly.
+
+Stop the loop (Ctrl+C) once all three show the patched message.
+
+---
+
+## Step 8 — Tear down
 
 ```bash
 docker compose down
@@ -256,14 +323,17 @@ This stops and removes all four containers and the `appnet` network in one shot 
 | Env vars for per-container config       | Step 3, 5                       |
 | Custom Docker network + name-based DNS  | Step 4, 5                       |
 | nginx reverse proxy / load balancing    | Step 4                          |
-| Compose orchestrating multi-container apps | Step 5–7                     |
+| Compose orchestrating multi-container apps | Step 5–6                     |
+| Healthchecks gating readiness           | Step 7                          |
+| Zero-downtime rolling updates           | Step 7                          |
 
-This is the same mental model discussed in `basic.md` §2 — you've now actually run it, not just read about it.
+This is the same mental model discussed in `basic.md` §2 and §8b, and `advanced.md` §5b — you've now actually run it, not just read about it.
 
 ---
 
 ## Next things to try on your own
 
+- Break it on purpose: skip the healthcheck wait in Step 7c and replace all three containers simultaneously (`docker compose up -d --build`) — watch the curl loop actually drop requests, so you can see what the rolling update was protecting you from.
 - Scale without editing the compose file: `docker compose up -d --scale app1=0` and add a 4th replica manually to see nginx pick it up after an nginx reload.
-- Add a `HEALTHCHECK` (see `advanced.md` §5) to the app Dockerfile and observe `docker compose ps` reporting health status.
 - Swap nginx round-robin for `least_conn` in `nginx.conf` and compare behavior.
+- Look into `advanced.md` §5b's note on `deploy.update_config` and Swarm mode — that's the next step up from manually scripting the staggered replacement you just did by hand.
