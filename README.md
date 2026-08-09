@@ -13,6 +13,7 @@ Each guide (mostly) follows the same three-tier structure:
 | Guide | Contents |
 |-------|----------|
 | [`docker/`](./docker) | Docker as a tool — install, core commands, Dockerfiles, Compose, production best practices, and a full hands-on exercise (multi-container app + nginx load balancer). |
+| [`k8s/`](./k8s) | Kubernetes as a tool — picks up where `docker/` leaves off: what actually automates health-watching, rolling updates, and scaling that we scripted by hand in Docker. *(in progress — basics started)* |
 
 More guides will be added here over time, following the same structure.
 
