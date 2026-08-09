@@ -1,4 +1,4 @@
-# Docker Basics — A Practical Guide (Windows)
+# Docker Basics — A Practical Guide
 
 Just the tool, no internals. If you know git commands, this maps similarly.
 
@@ -6,7 +6,7 @@ Just the tool, no internals. If you know git commands, this maps similarly.
 
 ## 1. Install
 
-- Install **Docker Desktop** (includes Engine, CLI, Compose). Needs WSL2 — installer sets it up or prompts you.
+- Install [Docker Desktop](https://docs.docker.com/desktop/) (includes Engine, CLI, Compose). Needs WSL2 — installer sets it up or prompts you (WSL2 is windows only requirement)
 - Launch Docker Desktop once and leave it running. Nothing works without it.
 - Verify:
 ```
