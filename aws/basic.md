@@ -1,8 +1,9 @@
-# AWS Basics — Hosting & Deployment Options
+# AWS Basics — Hosting & Deployment
 
-Builds on `docker/` and `k8s/`. Answers the practical question those guides lead to: **once you have a Docker image, where does it actually run on AWS, and which option fits your situation?**
+A practical guide to AWS's compute options for running an application — EC2, ECS, Fargate, EKS — compared plainly by scale, complexity, and cost, so you can pick the right one instead of guessing.
 
-This is not a general AWS tour — just the hosting/compute decision, since that's what "deploying your app" boils down to.
+This assumes your app ships as a **container image** (the standard way to package and run an app today, built with Docker or a similar tool — see the `docker/` guide if you need that piece). Everything here is about what happens *after* you have that image: where it runs, and what AWS automates for you at each tier.
+
 
 ---
 
@@ -43,7 +44,7 @@ The current recommended easy path (as of mid-2026). <cite index="21-1">Same unde
 > **Note:** AWS App Runner (previously the simplest "just deploy a container" option) <cite index="21-2">moved to maintenance mode in 2026 — no new features, closed to new customers after April 30, 2026</cite>. ECS Express Mode is AWS's official replacement path.
 
 ### EKS (Elastic Kubernetes Service)
-Real, managed Kubernetes — same concepts as `k8s/basic.md` (Deployments, Services, `kubectl`), except AWS runs the control plane. <cite index="16-1">Costs roughly $73/month for the control plane alone, before running a single container</cite> — a real cost EC2/ECS don't have. Worth it mainly if you need Kubernetes specifically (portability across clouds, team already knows it, complex orchestration needs).
+Real, managed Kubernetes — a more powerful but more complex orchestration system than ECS, with its own concepts (Pods, Deployments, Services) and its own CLI (`kubectl`). AWS runs the control plane for you, but you still need to understand Kubernetes itself to use it. <cite index="16-1">Costs roughly $73/month for the control plane alone, before running a single container</cite> — a real cost EC2/ECS don't have. Worth it mainly if you specifically need Kubernetes (portability across clouds, an existing team that knows it, or complex multi-service orchestration needs) rather than as a default choice.
 
 ---
 
@@ -89,18 +90,20 @@ This is also roughly the point where it's worth revisiting EC2 + ASG as a cost-o
 
 ---
 
-## 6. How the Pieces Connect to What You Already Know
+## 6. If You Already Know Docker / Kubernetes
 
-| From `docker/`/`k8s/` | AWS equivalent |
+This section is optional context for readers coming from this project's `docker/` and `k8s/` guides — skip it if those aren't familiar, nothing below depends on it.
+
+| Concept from `docker/`/`k8s/` | AWS equivalent |
 |---|---|
 | `docker build` | Unchanged — same Dockerfile, same build |
 | Docker Hub | **ECR** (Elastic Container Registry) — `docker push` to an ECR URL instead |
 | `docker-compose.yml` describing services | ECS **Task Definition** (or K8s manifests, if using EKS) |
-| Manually staggered rolling update (`docker/hands-on.md` Step 7) | ECS/EKS built-in rolling deployment — same concept, now automatic |
-| nginx load balancer we hand-configured | **Application Load Balancer (ALB)** — managed, automatic |
+| Manually staggered rolling update | ECS/EKS built-in rolling deployment — same concept, now automatic |
+| A hand-configured nginx load balancer | **Application Load Balancer (ALB)** — managed, automatic |
 | `docker compose up -d --build` triggering a redeploy | CI/CD pipeline step calling `aws ecs update-service` (or `kubectl apply` for EKS) |
 
-Nothing about the Docker fundamentals changes — this guide is entirely about what sits *around* the image once it's built.
+Nothing about the underlying container fundamentals changes on AWS — this guide is entirely about what sits *around* the image once it's built.
 
 ---
 
