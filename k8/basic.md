@@ -150,14 +150,100 @@ This single declaration is doing what our entire `docker-compose.yml` + `nginx.c
 
 ---
 
-## 6. What to Skip For Now
+## 6. Getting Config and Secrets Out of Your Image
+
+So far `image: myapp:1.0.0` in the Deployment is the only place configuration comes from. That's fine for a fixed image, but real apps need environment-specific values (a database URL for `dev` vs `prod`) and sensitive values (API keys, passwords) — and you don't want either baked into the image or pasted directly into a Deployment YAML that gets committed to git.
+
+Kubernetes has two primitives for exactly this split:
+
+| Primitive | For | Stored as |
+|---|---|---|
+| **ConfigMap** | Non-sensitive config — URLs, feature flags, log levels | Plain text |
+| **Secret** | Sensitive values — passwords, tokens, keys | Base64-encoded (**not encrypted** — see note below) |
+
+They're used the same way in a Deployment; the difference is entirely in what you put in them and how the cluster treats them.
+
+### ConfigMap
+
+```bash
+# Quick way — from literal values
+kubectl create configmap myapp-config \
+  --from-literal=LOG_LEVEL=info \
+  --from-literal=API_BASE_URL=https://api.example.com
+```
+or declaratively (the version you'd actually commit to git):
+```yaml
+# configmap.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: myapp-config
+data:
+  LOG_LEVEL: "info"
+  API_BASE_URL: "https://api.example.com"
+```
+
+### Secret
+
+```bash
+# Quick way — kubectl handles the base64 encoding for you
+kubectl create secret generic myapp-secrets \
+  --from-literal=DB_PASSWORD=supersecret \
+  --from-literal=API_KEY=sk_live_abc123
+```
+The declarative version requires the values pre-encoded, which is exactly why you almost never hand-write Secret YAML directly:
+```yaml
+# secret.yaml — DO NOT commit this file with real values
+apiVersion: v1
+kind: Secret
+metadata:
+  name: myapp-secrets
+type: Opaque
+data:
+  DB_PASSWORD: c3VwZXJzZWNyZXQ=   # base64, NOT encryption
+```
+
+**Important:** base64 is an encoding, not encryption — anyone with `kubectl get secret myapp-secrets -o yaml` and a terminal can decode it in one command (`echo <value> | base64 -d`). Kubernetes Secrets give you *separation from your app config* and *RBAC-controlled access*, not real secrecy at rest by default. For actual production secret management, see `advanced.md`'s Helm section and look into a dedicated secrets manager (AWS Secrets Manager, External Secrets Operator) or encryption-at-rest for etcd — out of scope here, but know the gap exists before treating a Secret object as sufficient on its own.
+
+### Using both in a Deployment
+
+```yaml
+spec:
+  containers:
+    - name: myapp
+      image: myapp:1.0.0
+      envFrom:
+        - configMapRef:
+            name: myapp-config      # every key in the ConfigMap becomes an env var
+        - secretRef:
+            name: myapp-secrets     # every key in the Secret becomes an env var
+      env:
+        - name: DB_PASSWORD          # or reference a single key explicitly
+          valueFrom:
+            secretKeyRef:
+              name: myapp-secrets
+              key: DB_PASSWORD
+```
+`envFrom` is the fast path (dump everything in as env vars); a single `valueFrom` reference is more explicit when you only need one or two specific keys, or want the env var name to differ from the key name.
+
+Apply all three together:
+```bash
+kubectl apply -f configmap.yaml
+kubectl apply -f secret.yaml
+kubectl apply -f deployment.yaml
+```
+
+---
+
+## 7. What to Skip For Now
 
 - Multi-node cluster setup (real clusters, cloud providers) — Minikube's single node is enough to learn the concepts
-- Helm (a package manager for Kubernetes manifests) — useful once your YAML sprawls across many files
+- Helm (a package manager for Kubernetes manifests) — useful once your YAML sprawls across many files; covered in `advanced.md` once you have enough manifests to feel that pain
 - Persistent Volumes / StatefulSets — needed for stateful apps (databases); skip until you actually need one
-- Ingress controllers — the "real" equivalent of external-facing nginx; `type: LoadBalancer` is enough to start
+- Ingress controllers — the "real" equivalent of external-facing nginx; `type: LoadBalancer` is enough to start. Covered with a concrete example in `networking.md`
 - RBAC, network policies — cluster security/access-control, relevant once multiple people/teams share a cluster
 - Custom Resource Definitions (CRDs), Operators — advanced extension mechanisms, not needed to be productive
+- Encrypting Secrets at rest / external secrets managers — §6 above flags this gap deliberately; revisit once you're handling real production credentials
 
 ---
 

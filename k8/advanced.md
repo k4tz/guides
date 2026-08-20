@@ -245,6 +245,118 @@ Cost reminder from `aws/basic.md`: the ~$73/month EKS control plane cost is sepa
 
 ---
 
+## 7. Helm — When Your YAML Sprawls Across Too Many Files
+
+`basic.md` flagged Helm as "skip for now." The trigger to stop skipping it: once you're maintaining separate near-duplicate YAML files per environment (`deployment-dev.yaml`, `deployment-staging.yaml`, `deployment-prod.yaml` that differ in three values each), Helm is the fix.
+
+### The mental model
+
+Helm is a package manager for Kubernetes manifests. A **chart** is a templated bundle of your YAML (Deployment, Service, ConfigMap, Secret, etc.) with the environment-specific bits replaced by placeholders. A **values file** fills in those placeholders per environment. `helm install`/`upgrade` renders the templates with your values and applies the result — same `kubectl apply` outcome, but from one templated source instead of N hand-maintained copies.
+
+### Install
+
+```bash
+# Windows (via winget)
+winget install Helm.Helm
+
+# Verify
+helm version
+```
+
+### Chart structure
+
+```
+myapp-chart/
+├── Chart.yaml           # chart name, version
+├── values.yaml           # default values
+├── values-prod.yaml       # overrides for prod
+└── templates/
+    ├── deployment.yaml
+    ├── service.yaml
+    └── configmap.yaml
+```
+
+`templates/deployment.yaml` — same Deployment from `basic.md` §5, templated:
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.appName }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ .Values.appName }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.appName }}
+    spec:
+      containers:
+        - name: {{ .Values.appName }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          ports:
+            - containerPort: {{ .Values.containerPort }}
+          resources:
+            requests:
+              memory: {{ .Values.resources.requests.memory }}
+              cpu: {{ .Values.resources.requests.cpu }}
+```
+
+`values.yaml` (defaults, e.g. for dev):
+```yaml
+appName: myapp
+replicaCount: 1
+containerPort: 3000
+image:
+  repository: myapp
+  tag: latest
+resources:
+  requests:
+    memory: "128Mi"
+    cpu: "100m"
+```
+
+`values-prod.yaml` (only the overrides — inherits everything else from `values.yaml`):
+```yaml
+replicaCount: 3
+image:
+  tag: "1.4.0"
+resources:
+  requests:
+    memory: "256Mi"
+    cpu: "250m"
+```
+
+### Core commands
+
+```bash
+helm install myapp ./myapp-chart                          # first deploy (dev defaults)
+helm install myapp ./myapp-chart -f values-prod.yaml       # deploy with prod overrides layered on top
+helm upgrade myapp ./myapp-chart -f values-prod.yaml       # apply changes — this replaces kubectl apply -f
+helm rollback myapp 1                                       # roll back to revision 1 — Helm keeps its own release history, separate from kubectl rollout undo
+helm list                                                    # see installed releases
+helm uninstall myapp                                         # remove everything the chart created
+```
+
+`helm upgrade` is where the actual leverage is: it diffs your rendered templates against the currently deployed state and applies just the delta, and every `upgrade` is a new tracked revision you can `helm rollback` to — independent of the Deployment-level `kubectl rollout undo` from §2, which only tracks Deployment revisions, not the ConfigMap/Secret/Service changes that often ship alongside them.
+
+### Installing other people's charts
+
+Most infrastructure you'd otherwise hand-write YAML for already has a maintained chart — this is the other major reason to know Helm, separate from templating your own app:
+```bash
+helm repo add cilium https://helm.cilium.io/
+helm repo update
+helm install cilium cilium/cilium --namespace kube-system
+```
+This is literally how the "Cilium installed via Helm" line in `networking.md` §B7 happens in practice — the reference networking stack there (Cilium, cert-manager, ExternalDNS) is almost always installed this way rather than by hand-writing each component's manifests yourself.
+
+### Secrets in Helm — don't put real values in values.yaml
+
+`values-prod.yaml` is a normal file you'd commit to git — never put a real `DB_PASSWORD` in it. Reference a Secret created outside Helm (as in `basic.md` §6), or use a Helm-aware secrets tool (`helm-secrets` with SOPS, or the External Secrets Operator flagged in `basic.md` §7) so encrypted values, not plaintext, live in version control.
+
+---
+
 ## What to Skip For Now
 
 - Custom autoscaling beyond default Horizontal Pod Autoscaler (HPA) — HPA on CPU/memory covers most needs before you need custom metrics
@@ -262,3 +374,5 @@ Cost reminder from `aws/basic.md`: the ~$73/month EKS control plane cost is sepa
 - [Pod Disruption Budgets](https://kubernetes.io/docs/tasks/run-application/configure-pdb/)
 - [EKS Best Practices Guide](https://docs.aws.amazon.com/eks/latest/best-practices/introduction.html)
 - [IAM Roles for Service Accounts (IRSA)](https://docs.aws.amazon.com/eks/latest/userguide/iam-roles-for-service-accounts.html)
+- [Helm docs](https://helm.sh/docs/)
+- [Artifact Hub — search for existing charts](https://artifacthub.io/)

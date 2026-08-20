@@ -11,6 +11,7 @@ Start here. Covers:
 - The one idea that explains most of Kubernetes: **declared desired state + continuous reconciliation**, versus Docker's one-shot imperative commands
 - Core `kubectl` commands
 - A minimal Deployment + Service example, annotated against what the equivalent Docker Compose + nginx setup was doing manually
+- ConfigMaps and Secrets — getting config and credentials out of your image, the difference between the two, and why a Secret's base64 encoding isn't encryption
 - What to deliberately skip for now (Helm, multi-node clusters, Ingress, RBAC, etc.)
 
 ### [`advanced.md`](./advanced.md)
@@ -22,10 +23,11 @@ Production-readiness. Covers:
 - PodDisruptionBudgets — protecting against voluntary disruption from node maintenance or autoscaling, not just your own deploys
 - Resource requests/limits and QoS classes — the single highest-leverage production setting, with guidance on picking real numbers instead of guessing
 - EKS-specific configuration: Node Groups vs Karpenter, IAM Roles for Service Accounts (IRSA), the AWS Load Balancer Controller, and how bad resource requests directly translate into AWS billing
+- Helm — when hand-maintained per-environment YAML becomes worth templating into a chart, a full worked chart with `values.yaml` overrides, and how `helm upgrade`/`helm rollback` differ from `kubectl rollout`
 
 ### [`networking.md`](./networking.md)
 Comprehensive networking — the topic most guides underexplain, split into two layers:
-- **Kubernetes networking**: CNI plugins (why Cilium/eBPF is the 2026 default), Services and their types, Ingress vs. the Gateway API (including Ingress NGINX's 2026 retirement), NetworkPolicy and a real zero-trust rollout sequence that won't cause an outage, and when a service mesh is actually justified
+- **Kubernetes networking**: CNI plugins (why Cilium/eBPF is the 2026 default), Services and their types, a worked classic Ingress example (AWS Load Balancer Controller + ALB annotations) alongside the Gateway API (including Ingress NGINX's 2026 retirement), NetworkPolicy and a real zero-trust rollout sequence that won't cause an outage, and when a service mesh is actually justified
 - **AWS VPC/subnet design for EKS**: the two-VPC reality of EKS, public/private/isolated subnet patterns with real CIDR examples, the pod-IP-exhaustion gotcha and its fix (prefix delegation), NAT Gateway design, VPC Endpoints, and private/compliance-grade cluster architecture
 
 ## Suggested order

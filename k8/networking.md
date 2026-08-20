@@ -60,7 +60,55 @@ spec:
 
 A `LoadBalancer` Service works, but if you have multiple apps/routes, you don't want a separate cloud load balancer per app. **Ingress** (and its modern replacement, the **Gateway API**) let one entry point route to many services based on hostname/path.
 
-**Important 2026 update:** <cite index="20-2">the Ingress NGINX controller — long the most common Ingress implementation — is officially retiring, and the ecosystem is migrating to the Gateway API.</cite> <cite index="20-3">The recommended path is Gateway API with an implementation matching your environment — Envoy Gateway, Istio Gateway, or Cilium Gateway (if you're already using Cilium as your CNI, its built-in Gateway API support is a natural fit).</cite>
+An Ingress resource on its own does nothing — it's a routing declaration that needs an **Ingress controller** actually running in the cluster to read it and configure a real load balancer/proxy accordingly. On EKS, that controller is most often the **AWS Load Balancer Controller** (installed via Helm — see `advanced.md` §7), which turns Ingress objects into a real ALB.
+
+Install the controller (once per cluster):
+```bash
+helm repo add eks https://aws.github.io/eks-charts
+helm install aws-load-balancer-controller eks/aws-load-balancer-controller \
+  -n kube-system \
+  --set clusterName=my-cluster \
+  --set serviceAccount.create=false \
+  --set serviceAccount.name=aws-load-balancer-controller
+```
+That last flag assumes you've already set up IRSA (`advanced.md` §6) for the controller's service account — the controller needs AWS IAM permissions to actually create/manage the ALB.
+
+A classic Ingress, routing two hostnames to two different Services through one ALB:
+```yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: myapp-ingress
+  annotations:
+    kubernetes.io/ingress.class: alb
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+spec:
+  rules:
+    - host: api.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: myapp-api-service
+                port:
+                  number: 80
+    - host: admin.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: myapp-admin-service
+                port:
+                  number: 80
+```
+`alb.ingress.kubernetes.io/*` annotations are how AWS-specific ALB configuration (scheme, target type, health checks, SSL certs via ACM) gets expressed on a resource that's otherwise plain, cloud-agnostic Kubernetes YAML — this annotation-driven approach is specific to the AWS Load Balancer Controller; other Ingress controllers (or Gateway API implementations) use their own equivalent knobs.
+
+**Important 2026 update:** <cite index="20-2">the Ingress NGINX controller — long the most common Ingress implementation — is officially retiring, and the ecosystem is migrating to the Gateway API.</cite> <cite index="20-3">The recommended path is Gateway API with an implementation matching your environment — Envoy Gateway, Istio Gateway, or Cilium Gateway (if you're already using Cilium as your CNI, its built-in Gateway API support is a natural fit).</cite> The classic Ingress example above still works and is still what you'll encounter in most existing EKS clusters, but for anything new, prefer Gateway API below.
 
 Minimal Gateway API example:
 ```yaml
