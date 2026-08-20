@@ -13,8 +13,11 @@ Each guide (mostly) follows the same three-tier structure:
 | Guide | Contents |
 |-------|----------|
 | [`docker/`](./docker) | Docker as a tool — install, core commands, Dockerfiles, Compose, production best practices, and a full hands-on exercise (multi-container app + nginx load balancer). |
-| [`k8s/`](./k8s) | Kubernetes as a tool — picks up where `docker/` leaves off: what actually automates health-watching, rolling updates, and scaling that we scripted by hand in Docker. *(in progress — basics started)* |
+| [`k8/`](./k8) | Kubernetes as a tool — picks up where `docker/` leaves off: what actually automates health-watching, rolling updates, and scaling that we scripted by hand in Docker. *(in progress — basics started)* |
 | [`aws/`](./aws) | Where a Docker image actually runs on AWS — EC2, ECS, Fargate, EKS compared by scale/complexity/cost, plus a worked example for a mid-size global app. *(in progress — basics started)* |
+| [`git/`](./git) | Daily git commands and mental model, then how a team actually organizes things — branching strategies (trunk-based, GitFlow, GitHub Flow), tags, releases, and hotfixes. |
+| [`cicd/`](./cicd) | The layer on top of everything else here — turning a git push into tests, a build, and a live deploy. Core pipeline concepts with GitHub Actions, then deployment strategies, environments, and a full worked pipeline deploying to AWS ECS. |
+| [`in-memory-cache/`](./in-memory-cache) | In memory caching, from the basics to advanced. |
 
 More guides will be added here over time, following the same structure.
 

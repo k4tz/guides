@@ -20,4 +20,4 @@ Usable standalone if you already know what a container image is. If you're comin
 
 ## Status
 
-This guide currently covers the compute/hosting decision only (`basic.md`). An advanced/practical follow-up (actual ECR push commands, a real ECS Task Definition, wiring a CI/CD pipeline step to trigger a deploy) is planned but not yet written — see the `cicd/` guide for the pipeline side of that in the meantime.
+This guide currently covers the compute/hosting decision only (`basic.md`). The ECR push commands, real ECS Task Definition, and CI/CD pipeline step wiring named here are now written up — see [`cicd/advanced.md`](../cicd/advanced.md) §4 for the full worked pipeline, built directly on the ECS Fargate / Express Mode path from this guide's §5.
