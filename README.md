@@ -19,6 +19,7 @@ Each guide (mostly) follows the same three-tier structure:
 | [`cicd/`](./cicd) | The layer on top of everything else here — turning a git push into tests, a build, and a live deploy. Core pipeline concepts with GitHub Actions, then deployment strategies, environments, and a full worked pipeline deploying to AWS ECS. |
 | [`in-memory-cache/`](./in-memory-cache) | In memory caching, from the basics to advanced. |
 | [`rabbitmq/`](./rabbitmq) | Message brokers for service-to-service communication — mental model (producer → exchange → queue → consumer), RabbitMQ as the primary tool, then durability, retries, dead-letter queues, and clustering for production. Hands-on: an order-processing system with fanout to independent services and a built-in retry/DLQ pipeline. |
+| [`testing/`](./testing) | The discipline of writing automated checks that verify your code works — and keeps working — without a human needing to click through the app every time something changes. |
 
 More guides will be added here over time, following the same structure.
 

@@ -1,0 +1,12 @@
+{
+  "name": "orders-api-testing-example",
+  "version": "1.0.0",
+  "description": "Hands-on testing exercise companion to python-api/ — same scenario, Jest instead of pytest.",
+  "scripts": {
+    "test": "jest",
+    "test:coverage": "jest --coverage"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0"
+  }
+}
