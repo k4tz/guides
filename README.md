@@ -12,12 +12,14 @@ Each guide (mostly) follows the same three-tier structure:
 
 | Guide | Contents |
 |-------|----------|
-| [`docker/`](./docker) | Docker as a tool — install, core commands, Dockerfiles, Compose, production best practices, and a full hands-on exercise (multi-container app + nginx load balancer). |
-| [`k8/`](./k8) | Kubernetes as a tool — picks up where `docker/` leaves off: what actually automates health-watching, rolling updates, and scaling that we scripted by hand in Docker. *(in progress — basics started)* |
 | [`aws/`](./aws) | Where a Docker image actually runs on AWS — EC2, ECS, Fargate, EKS compared by scale/complexity/cost, plus a worked example for a mid-size global app. *(in progress — basics started)* |
-| [`git/`](./git) | Daily git commands and mental model, then how a team actually organizes things — branching strategies (trunk-based, GitFlow, GitHub Flow), tags, releases, and hotfixes. |
 | [`cicd/`](./cicd) | The layer on top of everything else here — turning a git push into tests, a build, and a live deploy. Core pipeline concepts with GitHub Actions, then deployment strategies, environments, and a full worked pipeline deploying to AWS ECS. |
+| [`docker/`](./docker) | Docker as a tool — install, core commands, Dockerfiles, Compose, production best practices, and a full hands-on exercise (multi-container app + nginx load balancer). |
+| [`git/`](./git) | Daily git commands and mental model, then how a team actually organizes things — branching strategies (trunk-based, GitFlow, GitHub Flow), tags, releases, and hotfixes. |
 | [`in-memory-cache/`](./in-memory-cache) | In memory caching, from the basics to advanced. |
+| [`k8/`](./k8) | Kubernetes as a tool — picks up where `docker/` leaves off: what actually automates health-watching, rolling updates, and scaling that we scripted by hand in Docker. |
+| [`node-deep-dive/`](./node-deep-dive) | A deep dive into nodejs as a runtime and concurrency model. The goal is to understand what happens underneath a typical backend request and why certain Node.js patterns work well—or fail badly—under load. |
+| [`python-backend/`](./python-backend) | Python backend ecosystem and tooling guide, offering an opinionated workflow as a step into a coherent backend structure. |
 | [`rabbitmq/`](./rabbitmq) | Message brokers for service-to-service communication — mental model (producer → exchange → queue → consumer), RabbitMQ as the primary tool, then durability, retries, dead-letter queues, and clustering for production. Hands-on: an order-processing system with fanout to independent services and a built-in retry/DLQ pipeline. |
 | [`testing/`](./testing) | The discipline of writing automated checks that verify your code works — and keeps working — without a human needing to click through the app every time something changes. |
 

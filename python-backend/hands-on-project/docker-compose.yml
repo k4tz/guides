@@ -1,0 +1,45 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: orders
+      POSTGRES_USER: orders
+      POSTGRES_PASSWORD: orders
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U orders -d orders"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:8-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  payment-stub:
+    build:
+      context: ./payment_stub
+    ports:
+      - "9000:9000"
+
+  api:
+    build: .
+    environment:
+      DATABASE_URL: postgresql+asyncpg://orders:orders@postgres:5432/orders
+      REDIS_URL: redis://redis:6379/0
+      PAYMENT_BASE_URL: http://payment-stub:9000
+      PAYMENT_TIMEOUT_SECONDS: 3
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
