@@ -18,6 +18,7 @@ Each guide (mostly) follows the same three-tier structure:
 | [`git/`](./git) | Daily git commands and mental model, then how a team actually organizes things — branching strategies (trunk-based, GitFlow, GitHub Flow), tags, releases, and hotfixes. |
 | [`cicd/`](./cicd) | The layer on top of everything else here — turning a git push into tests, a build, and a live deploy. Core pipeline concepts with GitHub Actions, then deployment strategies, environments, and a full worked pipeline deploying to AWS ECS. |
 | [`in-memory-cache/`](./in-memory-cache) | In memory caching, from the basics to advanced. |
+| [`rabbitmq/`](./rabbitmq) | Message brokers for service-to-service communication — mental model (producer → exchange → queue → consumer), RabbitMQ as the primary tool, then durability, retries, dead-letter queues, and clustering for production. Hands-on: an order-processing system with fanout to independent services and a built-in retry/DLQ pipeline. |
 
 More guides will be added here over time, following the same structure.
 
